@@ -49,7 +49,7 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		}
 
 		// Retrieve the exported function "process"
-		processTx := module.ExportedFunction("processTx")
+		processTx := module.ExportedFunction("process")
 
 		_, err := processTx.Call(context.Background(), uint64(offset), uint64(len(tx)))
 		if err != nil {
