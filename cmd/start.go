@@ -20,19 +20,16 @@ var startCmd = &cobra.Command{
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 
-		name, _ := cmd.Flags().GetString("name")
-		config, _ := cmd.Flags().GetString("config")
-
 		publisherOptions := []dlsdkOptions.Option{
 			dlsdk.WithContext(ctx),
-			dlsdk.WithName(name),
+			dlsdk.WithName(*flagName),
 			dlsdk.WithPrefix(*flagPrefixName),
 			dlsdk.WithSubNats(natsSubConnection),
 			dlsdk.WithPubNats(natsPubConnection),
 			dlsdk.WithVerbose(false),
 		}
 
-		wasmlisherService := wasmlisher.New(publisherOptions, config)
+		wasmlisherService := wasmlisher.New(publisherOptions, *flagConfig, *flagCfInterval)
 
 		if wasmlisherService == nil {
 			return
@@ -44,20 +41,14 @@ var startCmd = &cobra.Command{
 		select {
 		case <-ctx.Done():
 			log.Println("Shutdown")
+			_ = wasmlisherService.Close()
 		case <-pubCtx.Done():
 			log.Println("Publisher stopped with cause: ", context.Cause(pubCtx).Error())
+			_ = wasmlisherService.Close()
 		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-
-	const (
-		CONFIG_DIR     = "~/config.json"
-		PUBLISHER_NAME = "wasmlisher"
-	)
-
-	startCmd.Flags().StringP("name", "", os.Getenv(PUBLISHER_NAME), "NATS subject name as in {prefix}.{name}.>")
-	startCmd.Flags().StringP("config", "", os.Getenv(CONFIG_DIR), "Wasmlisher config dir")
 }
