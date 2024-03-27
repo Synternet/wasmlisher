@@ -6,6 +6,7 @@ import (
 	dlsdkOptions "github.com/syntropynet/data-layer-sdk/pkg/options"
 	dlsdk "github.com/syntropynet/data-layer-sdk/pkg/service"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type Wasmlisher struct {
 	streams     []StreamConf
 	msgChannels map[string]chan []byte
 	active      bool
+	mutex       sync.Mutex
 }
 
 func New(publisherOptions []dlsdkOptions.Option, config string) *Wasmlisher {
@@ -31,6 +33,9 @@ func New(publisherOptions []dlsdkOptions.Option, config string) *Wasmlisher {
 }
 
 func (w *Wasmlisher) loadAndApplyConfig() {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
 	newStreams, err := LoadConfig(w.config)
 	if err != nil {
 		log.Printf("Error loading config: %v\n", err)
@@ -42,7 +47,6 @@ func (w *Wasmlisher) loadAndApplyConfig() {
 		newStreamMap[stream.InputStream] = stream
 	}
 
-	// Stop channels that are no longer in the config
 	for input, ch := range w.msgChannels {
 		if _, exists := newStreamMap[input]; !exists {
 			close(ch)
@@ -50,7 +54,6 @@ func (w *Wasmlisher) loadAndApplyConfig() {
 		}
 	}
 
-	// Start new streams
 	for _, stream := range newStreams {
 		if _, exists := w.msgChannels[stream.InputStream]; !exists {
 			w.subscribeToStream(stream.InputStream, stream.OutputStream, stream.File)
@@ -69,7 +72,10 @@ func (w *Wasmlisher) reloadConfigPeriodically() {
 
 func (w *Wasmlisher) subscribeToStream(inputSubject, outputSubject, wasmFilePath string) {
 	msgChannel := make(chan []byte)
+
+	w.mutex.Lock()
 	w.msgChannels[inputSubject] = msgChannel
+	w.mutex.Unlock()
 
 	_, err := w.Publisher.SubscribeTo(w.handlerInputStreamFactory(inputSubject), inputSubject)
 	if err != nil {
@@ -100,8 +106,15 @@ func (w *Wasmlisher) Start() context.Context {
 }
 
 func (w *Wasmlisher) Close() error {
+	w.mutex.Lock()
+	w.active = false
+	for _, ch := range w.msgChannels {
+		close(ch)
+	}
+	w.msgChannels = make(map[string]chan []byte) // Reset msgChannels to clean up
+	w.mutex.Unlock()
+
 	log.Println("Wasmlisher.Close")
-	w.active = false // Stop reloadConfigPeriodically loop
 	w.Publisher.Cancel(nil)
 
 	var err []error
@@ -110,10 +123,6 @@ func (w *Wasmlisher) Close() error {
 	errGr := w.Publisher.Group.Wait()
 	if !errors.Is(errGr, context.Canceled) {
 		err = append(err, errGr)
-	}
-
-	for _, ch := range w.msgChannels {
-		close(ch)
 	}
 
 	log.Println("Wasmlisher.Close DONE")
