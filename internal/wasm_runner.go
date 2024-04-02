@@ -11,7 +11,7 @@ import (
 )
 
 type Segment struct {
-	Suffix string `json:"subject"`
+	Suffix string `json:"suffix"`
 	Data   string `json:"data"`
 }
 
