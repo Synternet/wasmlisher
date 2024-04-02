@@ -2,12 +2,18 @@ package wasmlisher
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"log"
 	"os"
 )
+
+type Segment struct {
+	Suffix string `json:"subject"`
+	Data   string `json:"data"`
+}
 
 func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byte, outputSubject string, env map[string]string) {
 
@@ -76,6 +82,8 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		}
 
 		resultData, ok := memory.Read(uint32(namePtr), uint32(size[0]))
+
+		w.PublishWasmData(resultData, outputSubject)
 		if !ok {
 			log.Println("Failed to read from Wasm memory")
 			continue
@@ -95,4 +103,26 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		}
 		fmt.Printf("Result of processed data: %s\n", resultData)
 	}
+}
+
+func (w *Wasmlisher) PublishWasmData(data []byte, subject string) {
+
+	var segments []Segment
+
+	if err := json.Unmarshal(data, &segments); err != nil {
+		// if not able to unmarshal into segments just try to publish everything
+		_ = w.Publisher.PublishTo(data, subject)
+		return
+	}
+
+	// Publish each segment to its corresponding subject
+	for _, segment := range segments {
+		err := w.Publisher.PublishTo([]byte(segment.Data), subject+"."+segment.Suffix)
+		if err != nil {
+			log.Printf("Failed to publish processed data for subject %s: %v", subject+"."+segment.Suffix, err)
+		} else {
+			fmt.Printf("Published data for subject %s\n", subject+"."+segment.Suffix)
+		}
+	}
+
 }
