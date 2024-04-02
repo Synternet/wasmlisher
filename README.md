@@ -39,13 +39,16 @@ A typical config from file or endpoint output might look like this:
     "input": "syntropy.osmosis.tx",
     "output": "wasmlisher.osmosis.swap",
     "file": "/home/wasmslisher/wasm/tx.wasm",
-    "type": "filesystem"
+    "type": "filesystem",
   },
   {
     "input": "syntropy.osmosis.block",
     "output": "wasmlisher.osmosis.block",
     "file": "/home/wasmslisher/wasm/block.wasm",
-    "type": "filesystem"
+    "type": "filesystem",
+    "env": {
+      "ENV_VAR_NAME": "VALUE"
+    }
   }
 ]
 ```
