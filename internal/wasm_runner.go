@@ -9,11 +9,13 @@ import (
 	"os"
 )
 
-func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byte, outputSubject string) {
+func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byte, outputSubject string, env map[string]string) {
+
 	ctx := context.Background()
 
 	// Initialize wazero runtime
 	runtime := wazero.NewRuntime(ctx)
+	defer runtime.Close(ctx) // Clean up resources when done.
 
 	// Load WebAssembly module
 	code, err := os.ReadFile(wasmFilePath)
@@ -24,11 +26,19 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 
 	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
 
-	module, err := runtime.Instantiate(context.Background(), code)
+	moduleConfig := wazero.NewModuleConfig().WithStdout(os.Stdout).WithStderr(os.Stderr)
+
+	for key, value := range env {
+		moduleConfig = moduleConfig.WithEnv(key, value)
+	}
+
+	module, err := runtime.InstantiateWithConfig(context.Background(), code, moduleConfig)
 	if err != nil {
-		log.Printf("Failed to instantiate wasm module: %v", err)
+		fmt.Printf("Error instantiating Wasm module: %v\n", err)
 		return
 	}
+
+	defer module.Close(ctx) // Clean up resources when done.
 
 	memory := module.Memory()
 	if memory == nil {
@@ -36,39 +46,52 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		return
 	}
 
-	memory.Grow(100) // memory should be enough for any message. memory is overwritten each time.
+	malloc := module.ExportedFunction("malloc")
+	free := module.ExportedFunction("free")
+	processTx := module.ExportedFunction("process")
 
-	// Iterate over the stream of transactions
 	for tx := range inputStream {
-		fmt.Println("tx")
-		offset := uint32(0)
-		ok := memory.Write(offset, tx)
-		if !ok {
-			log.Println("Failed to write to Wasm memory")
-			return
+
+		// Use malloc to allocate memory for the transaction data.
+		namePtrResults, err := malloc.Call(ctx, uint64(len(tx)))
+		if err != nil {
+			log.Printf("malloc call failed: %v", err)
+			continue
+		}
+		namePtr := namePtrResults[0]
+
+		// Write the transaction data to the allocated space in memory.
+		if !memory.Write(uint32(namePtr), tx) {
+			log.Println("Failed to write transaction data to Wasm memory")
+			continue
 		}
 
-		// Retrieve the exported function "process"
-		processTx := module.ExportedFunction("process")
-
-		_, err := processTx.Call(context.Background(), uint64(offset), uint64(len(tx)))
+		// Process the transaction.
+		size, err := processTx.Call(ctx, namePtr, uint64(len(tx)))
 		if err != nil {
 			log.Printf("Process function call failed: %v", err)
-			return
+			continue
+		} else if size[0] == 0 {
+			continue
 		}
 
-		// Read the processed data from memory
-		resultData, ok := memory.Read(offset, uint32(len(tx)))
+		resultData, ok := memory.Read(uint32(namePtr), uint32(size[0]))
 		if !ok {
 			log.Println("Failed to read from Wasm memory")
-			return
+			continue
 		}
 
-		// Process the result
+		// Publish the processed data.
 		err = w.Publisher.PublishTo(resultData, outputSubject)
 		if err != nil {
 			log.Printf("Failed to publish processed data: %v", err)
-			return
+			continue
+		}
+
+		// Free the allocated memory.
+		_, err = free.Call(ctx, namePtr)
+		if err != nil {
+			log.Printf("Failed to free allocated memory: %v", err)
 		}
 		fmt.Printf("Result of processed data: %s\n", resultData)
 	}
