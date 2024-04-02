@@ -54,7 +54,7 @@ func (w *Wasmlisher) loadAndApplyConfig() {
 
 	for _, stream := range newStreams {
 		if _, exists := w.msgChannels[stream.InputStream]; !exists {
-			w.subscribeToStream(stream.InputStream, stream.OutputStream, stream.File)
+			w.subscribeToStream(stream)
 		}
 	}
 
@@ -68,16 +68,16 @@ func (w *Wasmlisher) reloadConfigPeriodically() {
 	}
 }
 
-func (w *Wasmlisher) subscribeToStream(inputSubject, outputSubject, wasmFilePath string) {
+func (w *Wasmlisher) subscribeToStream(stream StreamConf) {
 	msgChannel := make(chan []byte)
 
-	w.msgChannels[inputSubject] = msgChannel
-	_, err := w.Publisher.SubscribeTo(w.handlerInputStreamFactory(inputSubject), inputSubject)
+	w.msgChannels[stream.InputStream] = msgChannel
+	_, err := w.Publisher.SubscribeTo(w.handlerInputStreamFactory(stream.InputStream), stream.InputStream)
 	if err != nil {
 		log.Printf("Error subscribing to stream: %v\n", err)
 		return
 	}
-	go w.RunWasmStream(wasmFilePath, msgChannel, outputSubject)
+	go w.RunWasmStream(stream.File, msgChannel, stream.OutputStream, stream.Env)
 }
 
 // Factory function to create a handler function bound to a specific stream's channel

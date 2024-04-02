@@ -15,6 +15,7 @@ type StreamConf struct {
 	OutputStream string `json:"output"`
 	File         string `json:"file"`
 	Type         string `json:"type"`
+	Env          map[string]string
 }
 
 // Determine if the config string is a URL or a path
