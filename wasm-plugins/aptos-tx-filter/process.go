@@ -30,7 +30,7 @@ func process(ptr *byte, size int) int {
 	// Process the input data and get the output data as a byte slice.
 	outputData := ProcessAptosTransaction(inputData)
 
-	copy(inputData[:len(outputData)], outputData)
+	copy(inputData, outputData)
 
 	// Return the pointer to the allocated memory.
 	return len(outputData)

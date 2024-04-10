@@ -59,7 +59,7 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 	for tx := range inputStream {
 
 		// Use malloc to allocate memory for the transaction data.
-		namePtrResults, err := malloc.Call(ctx, uint64(len(tx)))
+		namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
 		if err != nil {
 			log.Printf("malloc call failed: %v", err)
 			continue
