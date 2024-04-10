@@ -77,7 +77,7 @@ func (w *Wasmlisher) subscribeToStream(stream StreamConf) {
 		log.Printf("Error subscribing to stream: %v\n", err)
 		return
 	}
-	go w.RunWasmStream(stream.File, msgChannel, stream.OutputStream, stream.Env)
+	go w.RunWasmStream(stream.LocalPath, msgChannel, stream.OutputStream, stream.Env)
 }
 
 // Factory function to create a handler function bound to a specific stream's channel

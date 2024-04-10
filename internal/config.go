@@ -3,19 +3,22 @@ package wasmlisher
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 )
 
 // StreamConf represents configuration of our secondary streams.
 type StreamConf struct {
-	InputStream  string `json:"input"`
-	OutputStream string `json:"output"`
-	File         string `json:"file"`
-	Type         string `json:"type"`
-	Env          map[string]string
+	InputStream  string            `json:"input"`
+	OutputStream string            `json:"output"`
+	File         string            `json:"file"`
+	Type         string            `json:"type"`
+	Env          map[string]string `json:"env"`
+	LocalPath    string
 }
 
 // Determine if the config string is a URL or a path
@@ -32,6 +35,18 @@ func LoadConfig(config string) ([]StreamConf, error) {
 		streams, err = LoadConfigFromUrl(config)
 	} else {
 		streams, err = LoadConfigFromFile(config)
+	}
+
+	for i, stream := range streams {
+		if stream.Type == "ipfs" {
+			localPath, err := DownloadFile(stream.File)
+			if err != nil {
+				return nil, fmt.Errorf("error downloading IPFS file: %w", err)
+			}
+			streams[i].LocalPath = localPath
+		} else {
+			streams[i].LocalPath = streams[i].File
+		}
 	}
 
 	if err != nil {
@@ -88,4 +103,32 @@ func LoadConfigFromUrl(url string) ([]StreamConf, error) {
 	}
 
 	return streams, nil
+}
+
+// DownloadFile downloads a file from the given URL and saves it to a local temporary file.
+// Returns the path to the local file or an error.
+func DownloadFile(fileURL string) (string, error) {
+	// Get the data
+	resp, err := http.Get(fileURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Create the file in the temp directory
+	tmpDir := os.TempDir()
+	fileName := filepath.Base(fileURL)
+	tmpFile, err := os.CreateTemp(tmpDir, fileName+"-*")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+
+	// Write the body to file
+	_, err = io.Copy(tmpFile, resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
 }
