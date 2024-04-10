@@ -12,7 +12,7 @@ import (
 
 type Segment struct {
 	Suffix string `json:"suffix"`
-	Data   string `json:"data"`
+	Data   any    `json:"data"`
 }
 
 func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byte, outputSubject string, env map[string]string) {
@@ -82,18 +82,12 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		}
 
 		resultData, ok := memory.Read(uint32(namePtr), uint32(size[0]))
-
-		w.PublishWasmData(resultData, outputSubject)
 		if !ok {
 			log.Println("Failed to read from Wasm memory")
 			continue
 		}
-
-		// Publish the processed data.
-		err = w.Publisher.PublishTo(resultData, outputSubject)
-		if err != nil {
-			log.Printf("Failed to publish processed data: %v", err)
-			continue
+		if len(resultData) != 0 {
+			w.PublishWasmData(resultData, outputSubject)
 		}
 
 		// Free the allocated memory.
@@ -101,28 +95,32 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		if err != nil {
 			log.Printf("Failed to free allocated memory: %v", err)
 		}
-		fmt.Printf("Result of processed data: %s\n", resultData)
 	}
 }
 
 func (w *Wasmlisher) PublishWasmData(data []byte, subject string) {
-
+	// Try to unmarshal the data into the expected segments structure.
 	var segments []Segment
-
-	if err := json.Unmarshal(data, &segments); err != nil {
-		// if not able to unmarshal into segments just try to publish everything
-		_ = w.Publisher.PublishTo(data, subject)
-		return
-	}
-
-	// Publish each segment to its corresponding subject
-	for _, segment := range segments {
-		err := w.Publisher.PublishTo([]byte(segment.Data), subject+"."+segment.Suffix)
+	err := json.Unmarshal(data, &segments)
+	// If unmarshaling into segments is successful, publish each segment.
+	if err == nil {
+		// Data unmarshaled successfully, publish each segment.
+		for _, segment := range segments {
+			segmentSubject := subject + "." + segment.Suffix
+			err := w.Publisher.PublishTo(segment.Data, segmentSubject)
+			if err != nil {
+				log.Printf("Failed to publish processed data for subject %s: %v", segmentSubject, err)
+			} else {
+				fmt.Printf("Published segmented data for subject %s\n", segmentSubject)
+			}
+		}
+	} else {
+		// If no segmentation, publish the data as is.
+		err := w.Publisher.PublishTo(data, subject)
 		if err != nil {
-			log.Printf("Failed to publish processed data for subject %s: %v", subject+"."+segment.Suffix, err)
+			log.Printf("Failed to publish processed data for subject %s: %v", subject, err)
 		} else {
-			fmt.Printf("Published data for subject %s\n", subject+"."+segment.Suffix)
+			fmt.Printf("Published full data for subject %s\n", subject)
 		}
 	}
-
 }

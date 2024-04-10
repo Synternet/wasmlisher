@@ -8,6 +8,11 @@ import (
 	"unsafe"
 )
 
+type Segment struct {
+	Suffix string `json:"suffix"`
+	Data   any    `json:"data"`
+}
+
 // Helper function to allocate memory in the Wasm environment
 //
 //go:linkname malloc runtime.malloc
@@ -38,10 +43,10 @@ func ProcessBitcoinTransaction(data []byte) []byte {
 		return nil
 	}
 
-	filteredMessages := []FilteredMessage{}
-
-	thresholdStr := os.Getenv("THRESHOLD")
+	thresholdStr := os.Getenv("MIN_BTC_AMOUNT")
 	threshold, _ := strconv.ParseFloat(thresholdStr, 64)
+
+	result := []Segment{}
 
 	for _, vout := range incoming.Vout {
 		if vout.Value >= threshold {
@@ -50,16 +55,16 @@ func ProcessBitcoinTransaction(data []byte) []byte {
 				Value: vout.Value,
 				To:    vout.ScriptPubKey.Address,
 			}
-			filteredMessages = append(filteredMessages, filteredMessage)
+			result = append(result, Segment{Suffix: thresholdStr, Data: filteredMessage})
 		}
 	}
 
-	if len(filteredMessages) == 0 {
+	if len(result) == 0 {
 		return nil // No transactions met the filter criteria
 	}
 
 	// Convert the filtered messages back to JSON to return.
-	jsonBytes, err := json.Marshal(filteredMessages)
+	jsonBytes, err := json.Marshal(result)
 	if err != nil {
 		log.Printf("ERROR: Could not marshal filtered messages: %s", err)
 		return nil

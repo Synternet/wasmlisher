@@ -10,7 +10,7 @@ import (
 
 type Segment struct {
 	Suffix string `json:"suffix"`
-	Data   string `json:"data"`
+	Data   any    `json:"data"`
 }
 
 // Helper function to allocate memory in the Wasm environment
@@ -51,13 +51,13 @@ func ProcessAptosTransaction(data []byte) []byte {
 		if address == "" {
 			address = "empty"
 		}
-		suffix := fmt.Sprintf("%s.%s", address, eventType)
+		suffix := fmt.Sprintf("event.%s.%s", address, eventType)
 		changeData, err := json.Marshal(change)
 		if err != nil {
 			log.Printf("ERROR marshalling change: %s", err)
 			continue
 		}
-		result = append(result, Segment{Suffix: suffix, Data: string(changeData)})
+		result = append(result, Segment{Suffix: suffix, Data: changeData})
 	}
 
 	for _, event := range incoming.Events {
@@ -66,13 +66,17 @@ func ProcessAptosTransaction(data []byte) []byte {
 		if address == "" {
 			address = "empty"
 		}
-		suffix := fmt.Sprintf("%s.%s", address, eventType)
+		suffix := fmt.Sprintf("event.%s.%s", address, eventType)
 		eventData, err := json.Marshal(event)
 		if err != nil {
 			log.Printf("ERROR marshalling event: %s", err)
 			continue
 		}
-		result = append(result, Segment{Suffix: suffix, Data: string(eventData)})
+		result = append(result, Segment{Suffix: suffix, Data: eventData})
+	}
+
+	if len(result) == 0 {
+		return nil
 	}
 
 	resultBytes, err := json.Marshal(result)
