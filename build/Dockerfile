@@ -40,8 +40,6 @@ CMD ["sh", "-c", "\
 --nats-pub-nkey ${NATS_PUB_NKEY} \
 --nats-sub-jwt ${NATS_SUB_JWT} \
 --nats-sub-nkey ${NATS_SUB_NKEY} \
---nats-sub-nkey ${NATS_SUB_NKEY} \
---nats-sub-nkey ${NATS_SUB_NKEY} \
 --name ${NAME} \
 --config ${CONFIG} \
 --cfInterval ${CONFIG_INTERVAL} \
