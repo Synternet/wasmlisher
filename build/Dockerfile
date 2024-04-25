@@ -43,4 +43,5 @@ CMD ["sh", "-c", "\
 --name ${NAME} \
 --config ${CONFIG} \
 --cfInterval ${CONFIG_INTERVAL} \
+start \
 "]
