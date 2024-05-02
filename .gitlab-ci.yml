@@ -85,10 +85,10 @@ update-tag:
     - git config --global user.name "Family Friendly DevOps bot"
   script:
     - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/syntropynet/devops/argocd/applications.git
-    - 'sed -i "s/tag:.*/tag: \"$CI_COMMIT_SHORT_SHA\"/" applications/$PROJECT/$APP_NAME/$ENV/values.yaml'
+    - 'sed -i "s/tag:.*/tag: \"$CI_COMMIT_SHORT_SHA\"/" applications/$PROJECT/$APP_NAME-publisher-devnet/$ENV/values.yaml'
     - cd applications
-    - git add $PROJECT/$APP_NAME/$ENV/values.yaml
-    - git commit -m "Updated image tag for $APP_NAME to $CI_COMMIT_SHORT_SHA"
+    - git add $PROJECT/$APP_NAME-publisher-devnet/$ENV/values.yaml
+    - git commit -m "Updated image tag for $APP_NAME-publisher-devnet to $CI_COMMIT_SHORT_SHA"
     - git push https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/syntropynet/devops/argocd/applications.git
   rules:
     - if: *master
