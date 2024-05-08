@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -12,11 +13,6 @@ type Segment struct {
 	Suffix string `json:"suffix"`
 	Data   any    `json:"data"`
 }
-
-// Helper function to allocate memory in the Wasm environment
-//
-//go:linkname malloc runtime.malloc
-func malloc(size uintptr) unsafe.Pointer
 
 // process is the exported function that can be called from the host environment.
 // It expects a pointer to the input data and the size of the data.
@@ -55,7 +51,7 @@ func ProcessBitcoinTransaction(data []byte) []byte {
 				Value: vout.Value,
 				To:    vout.ScriptPubKey.Address,
 			}
-			result = append(result, Segment{Suffix: thresholdStr, Data: filteredMessage})
+			result = append(result, Segment{Suffix: strings.Replace(thresholdStr, ".", "_", -1), Data: filteredMessage})
 		}
 	}
 

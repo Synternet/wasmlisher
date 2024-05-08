@@ -30,7 +30,9 @@ func process(ptr *byte, size int) int {
 	// Process the input data and get the output data as a byte slice.
 	outputData := ProcessAptosTransaction(inputData)
 
-	copy(inputData, outputData)
+	outpuztData := unsafe.Slice(ptr, len(outputData))
+
+	copy(outpuztData, outputData)
 
 	// Return the pointer to the allocated memory.
 	return len(outputData)
@@ -57,7 +59,7 @@ func ProcessAptosTransaction(data []byte) []byte {
 			log.Printf("ERROR marshalling change: %s", err)
 			continue
 		}
-		result = append(result, Segment{Suffix: suffix, Data: changeData})
+		result = append(result, Segment{Suffix: suffix, Data: string(changeData)})
 	}
 
 	for _, event := range incoming.Events {
@@ -72,7 +74,7 @@ func ProcessAptosTransaction(data []byte) []byte {
 			log.Printf("ERROR marshalling event: %s", err)
 			continue
 		}
-		result = append(result, Segment{Suffix: suffix, Data: eventData})
+		result = append(result, Segment{Suffix: suffix, Data: string(eventData)})
 	}
 
 	if len(result) == 0 {

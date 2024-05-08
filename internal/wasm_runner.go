@@ -43,28 +43,22 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		fmt.Printf("Error instantiating Wasm module: %v\n", err)
 		return
 	}
-
-	defer module.Close(ctx) // Clean up resources when done.
-
-	memory := module.Memory()
-	if memory == nil {
-		log.Println("Wasm module does not export memory")
-		return
-	}
-
 	malloc := module.ExportedFunction("malloc")
-	free := module.ExportedFunction("free")
 	processTx := module.ExportedFunction("process")
 
-	for tx := range inputStream {
+	// Use malloc to allocate memory for the transaction data.
+	namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
+	if err != nil {
+		log.Printf("malloc call failed: %v", err)
+	}
+	namePtr := namePtrResults[0]
 
-		// Use malloc to allocate memory for the transaction data.
-		namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
-		if err != nil {
-			log.Printf("malloc call failed: %v", err)
-			continue
+	for tx := range inputStream {
+		memory := module.Memory()
+		if memory == nil {
+			log.Println("Wasm module does not export memory")
+			return
 		}
-		namePtr := namePtrResults[0]
 
 		// Write the transaction data to the allocated space in memory.
 		if !memory.Write(uint32(namePtr), tx) {
@@ -90,11 +84,6 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 			w.PublishWasmData(resultData, outputSubject)
 		}
 
-		// Free the allocated memory.
-		_, err = free.Call(ctx, namePtr)
-		if err != nil {
-			log.Printf("Failed to free allocated memory: %v", err)
-		}
 	}
 }
 
