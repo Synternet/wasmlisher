@@ -105,7 +105,7 @@ func (w *Wasmlisher) PublishWasmData(data []byte, subject string) {
 		}
 	} else {
 		// If no segmentation, publish the data as is.
-		err := w.Publisher.PublishTo(data, subject)
+		err := w.Publisher.PublishBufTo(data, subject)
 		if err != nil {
 			log.Printf("Failed to publish processed data for subject %s: %v", subject, err)
 		} else {
