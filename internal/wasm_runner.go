@@ -44,7 +44,6 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		return
 	}
 	malloc := module.ExportedFunction("malloc")
-	processTx := module.ExportedFunction("process")
 
 	// Use malloc to allocate memory for the transaction data.
 	namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
@@ -53,6 +52,11 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 	}
 	namePtr := namePtrResults[0]
 
+	memory := module.Memory()
+	if memory == nil {
+		log.Println("Wasm module does not export memory")
+		return
+	}
 	for tx := range inputStream {
 		memory := module.Memory()
 		if memory == nil {
@@ -65,9 +69,11 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 			log.Println("Failed to write transaction data to Wasm memory")
 			continue
 		}
+		processTx := module.ExportedFunction("process")
 
 		// Process the transaction.
 		size, err := processTx.Call(ctx, namePtr, uint64(len(tx)))
+
 		if err != nil {
 			log.Printf("Process function call failed: %v", err)
 			continue
