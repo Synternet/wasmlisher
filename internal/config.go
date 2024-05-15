@@ -27,7 +27,16 @@ func isURL(str string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-func LoadConfig(config string) ([]StreamConf, error) {
+func FindStreamByInput(streams []StreamConf, inputStream string) (StreamConf, bool) {
+	for _, stream := range streams {
+		if stream.InputStream == inputStream {
+			return stream, true
+		}
+	}
+	return StreamConf{}, false
+}
+
+func LoadConfig(config string, existingStreams []StreamConf) ([]StreamConf, error) {
 	var streams []StreamConf
 	var err error
 
@@ -37,20 +46,26 @@ func LoadConfig(config string) ([]StreamConf, error) {
 		streams, err = LoadConfigFromFile(config)
 	}
 
-	for i, stream := range streams {
-		if stream.Type == "ipfs" {
-			localPath, err := DownloadFile(stream.File)
-			if err != nil {
-				return nil, fmt.Errorf("error downloading IPFS file: %w", err)
-			}
-			streams[i].LocalPath = localPath
-		} else {
-			streams[i].LocalPath = streams[i].File
-		}
-	}
-
 	if err != nil {
 		return nil, err
+	}
+
+	for i, stream := range streams {
+		if stream.Type == "ipfs" {
+			existingStream, exists := FindStreamByInput(existingStreams, stream.InputStream)
+			if !exists || existingStream.File != stream.File {
+				localPath, err := DownloadFile(stream.File)
+				if err != nil {
+					return nil, fmt.Errorf("error downloading IPFS file: %w", err)
+				}
+				streams[i].LocalPath = localPath
+			} else {
+				// If the file has not changed, use the previously downloaded path
+				streams[i].LocalPath = existingStream.LocalPath
+			}
+		} else {
+			streams[i].LocalPath = stream.File
+		}
 	}
 
 	return streams, nil

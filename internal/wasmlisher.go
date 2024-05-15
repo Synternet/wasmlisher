@@ -34,7 +34,7 @@ func New(publisherOptions []dlsdkOptions.Option, config string, configInterval i
 
 func (w *Wasmlisher) loadAndApplyConfig() {
 
-	newStreams, err := LoadConfig(w.config)
+	newStreams, err := LoadConfig(w.config, w.streams)
 	if err != nil {
 		log.Printf("Error loading config: %v\n", err)
 		return
