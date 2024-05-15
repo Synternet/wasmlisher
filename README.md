@@ -36,13 +36,13 @@ A typical config from file or endpoint output might look like this:
 ```json
 [
   {
-    "input": "syntropy.osmosis.tx",
+    "input": "synternet.osmosis.tx",
     "output": "wasmlisher.osmosis.swap",
     "file": "/home/wasmslisher/wasm/tx.wasm",
     "type": "filesystem",
   },
   {
-    "input": "syntropy.osmosis.block",
+    "input": "synternet.osmosis.block",
     "output": "wasmlisher.osmosis.block",
     "file": "/home/wasmslisher/wasm/block.wasm",
     "type": "filesystem",
