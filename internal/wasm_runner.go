@@ -33,44 +33,38 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
 
 	moduleConfig := wazero.NewModuleConfig().WithStdout(os.Stdout).WithStderr(os.Stderr)
-
 	for key, value := range env {
 		moduleConfig = moduleConfig.WithEnv(key, value)
 	}
 
-	module, err := runtime.InstantiateWithConfig(context.Background(), code, moduleConfig)
-	if err != nil {
-		fmt.Printf("Error instantiating Wasm module: %v\n", err)
-		return
-	}
-	malloc := module.ExportedFunction("malloc")
-
-	// Use malloc to allocate memory for the transaction data.
-	namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
-	if err != nil {
-		log.Printf("malloc call failed: %v", err)
-	}
-	namePtr := namePtrResults[0]
-
-	memory := module.Memory()
-	if memory == nil {
-		log.Println("Wasm module does not export memory")
-		return
-	}
 	for tx := range inputStream {
+
+		module, err := runtime.InstantiateWithConfig(context.Background(), code, moduleConfig)
+		if err != nil {
+			log.Printf("Failed to instantiate module: %v", err)
+			return
+		}
+
+		malloc := module.ExportedFunction("malloc")
+
+		// Use malloc to allocate memory for the transaction data.
+		namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
+		if err != nil {
+			log.Printf("malloc call failed: %v", err)
+		}
+		namePtr := namePtrResults[0]
+
 		memory := module.Memory()
 		if memory == nil {
 			log.Println("Wasm module does not export memory")
 			return
 		}
-
 		// Write the transaction data to the allocated space in memory.
 		if !memory.Write(uint32(namePtr), tx) {
 			log.Println("Failed to write transaction data to Wasm memory")
 			continue
 		}
 		processTx := module.ExportedFunction("process")
-
 		// Process the transaction.
 		size, err := processTx.Call(ctx, namePtr, uint64(len(tx)))
 
@@ -89,7 +83,6 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		if len(resultData) != 0 {
 			w.PublishWasmData(resultData, outputSubject)
 		}
-
 	}
 }
 
