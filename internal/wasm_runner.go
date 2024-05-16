@@ -83,6 +83,7 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		if len(resultData) != 0 {
 			w.PublishWasmData(resultData, outputSubject)
 		}
+		go module.Close(ctx)
 	}
 }
 
