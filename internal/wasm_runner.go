@@ -16,14 +16,12 @@ type Segment struct {
 }
 
 func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byte, outputSubject string, env map[string]string) {
-
 	ctx := context.Background()
 
-	// Initialize wazero runtime
-	runtime := wazero.NewRuntime(ctx)
-	defer runtime.Close(ctx) // Clean up resources when done.
+	runtimeConfig := wazero.NewRuntimeConfig().WithMemoryLimitPages(100).WithMemoryCapacityFromMax(true)
+	runtime := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
+	defer runtime.Close(ctx)
 
-	// Load WebAssembly module
 	code, err := os.ReadFile(wasmFilePath)
 	if err != nil {
 		log.Printf("Failed to read wasm file: %v", err)
@@ -37,28 +35,28 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		moduleConfig = moduleConfig.WithEnv(key, value)
 	}
 
+	module, err := runtime.InstantiateWithConfig(context.Background(), code, moduleConfig)
+	if err != nil {
+		log.Printf("Failed to instantiate module: %v", err)
+		return
+	}
+
+	malloc := module.ExportedFunction("malloc")
+	free := module.ExportedFunction("free")
+
+	namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
+	if err != nil {
+		log.Printf("malloc call failed: %v", err)
+	}
+	namePtr := namePtrResults[0]
+
 	for tx := range inputStream {
-
-		module, err := runtime.InstantiateWithConfig(context.Background(), code, moduleConfig)
-		if err != nil {
-			log.Printf("Failed to instantiate module: %v", err)
-			return
-		}
-
-		malloc := module.ExportedFunction("malloc")
-
-		// Use malloc to allocate memory for the transaction data.
-		namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
-		if err != nil {
-			log.Printf("malloc call failed: %v", err)
-		}
-		namePtr := namePtrResults[0]
-
 		memory := module.Memory()
 		if memory == nil {
 			log.Println("Wasm module does not export memory")
 			return
 		}
+		fmt.Println(memory.Size())
 		// Write the transaction data to the allocated space in memory.
 		if !memory.Write(uint32(namePtr), tx) {
 			log.Println("Failed to write transaction data to Wasm memory")
@@ -80,10 +78,19 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 			log.Println("Failed to read from Wasm memory")
 			continue
 		}
+
+		if size[0] != 0 {
+			defer func() {
+				_, err := free.Call(ctx, size[0])
+				if err != nil {
+					log.Panicln(err)
+				}
+			}()
+		}
+
 		if len(resultData) != 0 {
 			w.PublishWasmData(resultData, outputSubject)
 		}
-		go module.Close(ctx)
 	}
 }
 
