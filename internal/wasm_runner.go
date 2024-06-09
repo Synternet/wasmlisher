@@ -1,13 +1,11 @@
 package wasmlisher
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+	"github.com/bytecodealliance/wasmtime-go/v12"
+	"io/ioutil"
 	"log"
-	"os"
 )
 
 type Segment struct {
@@ -16,81 +14,105 @@ type Segment struct {
 }
 
 func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byte, outputSubject string, env map[string]string) {
-	ctx := context.Background()
-
-	runtimeConfig := wazero.NewRuntimeConfig().WithMemoryLimitPages(100).WithMemoryCapacityFromMax(true)
-	runtime := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
-	defer runtime.Close(ctx)
-
-	code, err := os.ReadFile(wasmFilePath)
+	// Read the WebAssembly file
+	code, err := ioutil.ReadFile(wasmFilePath)
 	if err != nil {
-		log.Printf("Failed to read wasm file: %v", err)
-		return
+		log.Fatalf("Failed to read wasm file: %v", err)
 	}
 
-	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
+	engine := wasmtime.NewEngine()
 
-	moduleConfig := wazero.NewModuleConfig().WithStdout(os.Stdout).WithStderr(os.Stderr)
-	for key, value := range env {
-		moduleConfig = moduleConfig.WithEnv(key, value)
-	}
+	store := wasmtime.NewStore(engine)
 
-	module, err := runtime.InstantiateWithConfig(context.Background(), code, moduleConfig)
+	module, err := wasmtime.NewModule(engine, code)
 	if err != nil {
-		log.Printf("Failed to instantiate module: %v", err)
-		return
+		log.Fatalf("Failed to compile module: %v", err)
 	}
 
-	malloc := module.ExportedFunction("malloc")
-	free := module.ExportedFunction("free")
+	wasiConfig := wasmtime.NewWasiConfig()
 
-	namePtrResults, err := malloc.Call(ctx, uint64(1000000)) // this should be enough for any transaction data.
+	store.SetWasi(wasiConfig)
+
+	linker := wasmtime.NewLinker(engine)
+	err = linker.DefineWasi()
 	if err != nil {
-		log.Printf("malloc call failed: %v", err)
+		log.Fatalf("Failed to define WASI: %v", err)
 	}
-	namePtr := namePtrResults[0]
 
+	instance, err := linker.Instantiate(store, module)
+	if err != nil {
+		log.Fatalf("Failed to instantiate module: %v", err)
+	}
+
+	alloc := instance.GetExport(store, "malloc").Func()
+	if alloc == nil {
+		log.Fatalf("Failed to get malloc function")
+	}
+
+	process := instance.GetExport(store, "process").Func()
+	if process == nil {
+		log.Fatalf("Failed to get process function")
+	}
+
+	// Access the memory
+	memory := instance.GetExport(store, "memory").Memory()
+	if memory == nil {
+		log.Fatalf("Failed to get memory")
+	}
+
+	memory.Grow(store, 50)
+	memoryData := memory.UnsafeData(store)
+	memorySize := int32(len(memoryData))
+	fmt.Printf("Memory size: %d bytes\n", memorySize)
+
+	const memoryBlockSize = 55000 // Adjust this based on your needs
+
+	if memoryBlockSize > memorySize {
+		log.Fatalf("Memory block size %d exceeds memory size %d", memoryBlockSize, memorySize)
+	}
+
+	// Allocate a fixed memory block once
+	ptrVal, err := alloc.Call(store, memoryBlockSize)
+	if err != nil {
+		log.Fatalf("Failed to allocate memory: %v", err)
+	}
+	ptr := ptrVal.(int32)
+
+	// Ensure ptr is within bounds
+	if ptr < 0 || ptr+memoryBlockSize > memorySize {
+		log.Fatalf("Allocated pointer is out of memory bounds: %d", ptr)
+	}
+
+	// Process each transaction from the input stream
 	for tx := range inputStream {
-		memory := module.Memory()
-		if memory == nil {
-			log.Println("Wasm module does not export memory")
-			return
-		}
-		fmt.Println(memory.Size())
-		// Write the transaction data to the allocated space in memory.
-		if !memory.Write(uint32(namePtr), tx) {
-			log.Println("Failed to write transaction data to Wasm memory")
+		txSize := int32(len(tx))
+		if txSize > memoryBlockSize {
+			log.Printf("Transaction size %d exceeds allocated memory block size %d", txSize, memoryBlockSize)
 			continue
 		}
-		processTx := module.ExportedFunction("process")
-		// Process the transaction.
-		size, err := processTx.Call(ctx, namePtr, uint64(len(tx)))
 
+		// Zero out the allocated memory block before copying new data
+		for i := int32(0); i < memoryBlockSize; i++ {
+			memoryData[ptr+i] = 0
+		}
+
+		// Copy the transaction data to the allocated space in memory
+		copy(memoryData[ptr:ptr+txSize], tx)
+
+		// Process the transaction
+		resultVal, err := process.Call(store, ptr, txSize)
 		if err != nil {
 			log.Printf("Process function call failed: %v", err)
 			continue
-		} else if size[0] == 0 {
+		}
+		size := resultVal.(int32)
+		if size == 0 {
 			continue
 		}
 
-		resultData, ok := memory.Read(uint32(namePtr), uint32(size[0]))
-		if !ok {
-			log.Println("Failed to read from Wasm memory")
-			continue
-		}
+		resultData := memoryData[ptr : ptr+size]
 
-		if size[0] != 0 {
-			defer func() {
-				_, err := free.Call(ctx, size[0])
-				if err != nil {
-					log.Panicln(err)
-				}
-			}()
-		}
-
-		if len(resultData) != 0 {
-			w.PublishWasmData(resultData, outputSubject)
-		}
+		w.PublishWasmData(resultData, outputSubject)
 	}
 }
 
