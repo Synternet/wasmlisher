@@ -16,18 +16,7 @@ RUN CGO_ENABLED=1 go build -v -o . -installsuffix cgo -ldflags="-w -s" ./...
 #
 # 2. Runtime Container
 #
-FROM alpine
-
-ENV TZ=Europe/Vilnius \
-    PATH="/app:${PATH}"
-
-RUN apk add --update --no-cache \
-    tzdata \
-    ca-certificates \
-    bash \
-    && \
-    cp --remove-destination /usr/share/zoneinfo/${TZ} /etc/localtime && \
-    echo "${TZ}" > /etc/timezone
+FROM golang:1.21
 
 WORKDIR /home/app
 COPY --from=build /home/src/wasmlisher .
