@@ -11,7 +11,7 @@ COPY . /home/src
 WORKDIR /home/src
 
 # Build components.
-RUN CGO_ENABLED=0 go build -v -o . -installsuffix cgo -ldflags="-w -s" ./...
+RUN CGO_ENABLED=1 go build -v -o . -installsuffix cgo -ldflags="-w -s" ./...
 
 #
 # 2. Runtime Container

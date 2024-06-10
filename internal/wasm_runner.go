@@ -3,7 +3,7 @@ package wasmlisher
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bytecodealliance/wasmtime-go/v12"
+	wasmtimego "github.com/bytecodealliance/wasmtime-go/v21"
 	"io/ioutil"
 	"log"
 )
@@ -20,20 +20,20 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 		log.Fatalf("Failed to read wasm file: %v", err)
 	}
 
-	engine := wasmtime.NewEngine()
+	engine := wasmtimego.NewEngine()
 
-	store := wasmtime.NewStore(engine)
+	store := wasmtimego.NewStore(engine)
 
-	module, err := wasmtime.NewModule(engine, code)
+	module, err := wasmtimego.NewModule(engine, code)
 	if err != nil {
 		log.Fatalf("Failed to compile module: %v", err)
 	}
 
-	wasiConfig := wasmtime.NewWasiConfig()
+	wasiConfig := wasmtimego.NewWasiConfig()
 
 	store.SetWasi(wasiConfig)
 
-	linker := wasmtime.NewLinker(engine)
+	linker := wasmtimego.NewLinker(engine)
 	err = linker.DefineWasi()
 	if err != nil {
 		log.Fatalf("Failed to define WASI: %v", err)
@@ -82,7 +82,6 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 	if ptr < 0 || ptr+memoryBlockSize > memorySize {
 		log.Fatalf("Allocated pointer is out of memory bounds: %d", ptr)
 	}
-
 	// Process each transaction from the input stream
 	for tx := range inputStream {
 		txSize := int32(len(tx))
@@ -90,7 +89,7 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 			log.Printf("Transaction size %d exceeds allocated memory block size %d", txSize, memoryBlockSize)
 			continue
 		}
-
+		store.GC()
 		// Zero out the allocated memory block before copying new data
 		for i := int32(0); i < memoryBlockSize; i++ {
 			memoryData[ptr+i] = 0
