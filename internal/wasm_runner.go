@@ -6,6 +6,7 @@ import (
 	wasmtimego "github.com/bytecodealliance/wasmtime-go/v21"
 	"io/ioutil"
 	"log"
+	"log/slog"
 )
 
 type Segment struct {
@@ -124,7 +125,13 @@ func (w *Wasmlisher) PublishWasmData(data []byte, subject string) {
 		// Data unmarshaled successfully, publish each segment.
 		for _, segment := range segments {
 			segmentSubject := subject + "." + segment.Suffix
-			err := w.Publisher.PublishTo(segment.Data, segmentSubject)
+			msgBytes, err := json.Marshal(segment.Data)
+			if err != nil {
+				slog.Error("Failed to serialize message:", err)
+				continue
+			}
+
+			err = w.Publisher.PublishBufTo(msgBytes, segmentSubject)
 			if err != nil {
 				log.Printf("Failed to publish processed data for subject %s: %v", segmentSubject, err)
 			} else {

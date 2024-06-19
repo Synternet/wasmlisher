@@ -1,12 +1,12 @@
 default:
-  image: registry.gitlab.com/syntropynet/devops/container-images/imagebuilder:latest
+  image: registry.gitlab.com/synternet/devops/container-images/imagebuilder:latest
   tags:
     - docker
 
 variables:
   BRANCH_STABLE: "0.1"
   GOPATH: "$CI_PROJECT_DIR/.cache"
-  GOPRIVATE: "gitlab.com/syntropynet/*"
+  GOPRIVATE: "gitlab.com/synternet/*"
   GO111MODULE: "on"
   APP_NAME: wasmlisher
   PROJECT: amberdm
@@ -34,7 +34,7 @@ coverage:
     script:
         - mkdir -p ./coverage
         - go install github.com/t-yuki/gocover-cobertura@latest
-        - go env -w GOPRIVATE=github.com/syntropynet/*
+        - go env -w GOPRIVATE=github.com/synternet/*
         - go test ./... -v -coverprofile=coverage/coverage.txt -covermode count
         - go tool cover -func=coverage/coverage.txt 
         - go tool cover -html=coverage/coverage.txt -o coverage/coverage.html
@@ -84,11 +84,11 @@ update-tag:
     - git config --global user.email "devops-gitlab@noia.network"
     - git config --global user.name "Family Friendly DevOps bot"
   script:
-    - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/syntropynet/devops/argocd/applications.git
+    - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/synternet/devops/argocd/applications.git
     - 'sed -i "s/tag:.*/tag: \"$CI_COMMIT_SHORT_SHA\"/" applications/$PROJECT/$APP_NAME-publisher-devnet/$ENV/values.yaml'
     - cd applications
     - git add $PROJECT/$APP_NAME-publisher-devnet/$ENV/values.yaml
     - git commit -m "Updated image tag for $APP_NAME-publisher-devnet to $CI_COMMIT_SHORT_SHA"
-    - git push https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/syntropynet/devops/argocd/applications.git
+    - git push https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/synternet/devops/argocd/applications.git
   rules:
     - if: *master

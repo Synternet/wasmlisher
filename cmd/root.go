@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/syntropynet/data-layer-sdk/pkg/options"
+	"github.com/synternet/data-layer-sdk/pkg/options"
 )
 
 var (

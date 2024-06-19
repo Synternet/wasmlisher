@@ -1,9 +1,9 @@
 package main
 
 import (
-	_ "github.com/syntropynet/data-layer-sdk/pkg/dotenv"
+	_ "github.com/synternet/data-layer-sdk/pkg/dotenv"
 
-	"gitlab.com/syntropynet/amberdm/publisher/wasmlisher/cmd"
+	"gitlab.com/synternet/amberdm/publisher/wasmlisher/cmd"
 )
 
 func main() {

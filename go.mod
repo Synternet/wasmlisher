@@ -1,4 +1,4 @@
-module gitlab.com/syntropynet/amberdm/publisher/wasmlisher
+module gitlab.com/synternet/amberdm/publisher/wasmlisher
 
 go 1.21
 
@@ -6,7 +6,7 @@ require (
 	github.com/bytecodealliance/wasmtime-go/v21 v21.0.0
 	github.com/nats-io/nats.go v1.25.0
 	github.com/spf13/cobra v1.7.0
-	github.com/syntropynet/data-layer-sdk v0.1.0
+	github.com/synternet/data-layer-sdk v0.4.1
 )
 
 require (

@@ -21,7 +21,7 @@ Wasmlisher is a robust service designed to interact with NATS streaming systems,
 Clone the repository and build the Wasmlisher:
 
 ```bash
-git@gitlab.com:syntropynet/amberdm/publisher/wasmlisher.git
+git@gitlab.com:synternet/amberdm/publisher/wasmlisher.git
 cd wasmlisher
 go mod tidy
 make build
@@ -66,5 +66,7 @@ Replace the placeholders (e.g., `<NATS_SUB_NKEY>`, `<NATS_SUB_JWT>`, `/path/to/c
 ### Example
 
 ```bash
-./wasmlisher -K SUAMEQ43VTGBXZAUU7VSATP3LILQTAKET6XCSWJIYRIFZJ4RGYBLIGZXX -W exampleXAiOiJKV1QiLCJhbGciOiJlZDI1NTE5LW5rZXkifQ.eyJqdGkiOiJKUkJEV0hISEUzUE9PSTdNVVpQNlVJQ0NGTTZJQ1JRM0NGSVNUWFY1QUdXNjVPMjdJSkdRIiwiaWF0IjoxNzExNTI5NjgzLCJpc3MiOiJBRDVHUENaVVFLRVhaTlNMTEZaUklDVjIySE1QQlhCQ0NFV0c3TEdZQkRPRTJWN1ZBMlBBWjQzVyIsInN1YiI6IlVETFVWR0hFSVRRWEk1NkE3TFpNR0lDWVhUQVlGSVdZRTNYUEE0SFRWVk1IVUFaTVhJR1VOUUNGIiwibmF0cyI6eyJwdWIiOnt9LCJzdWIiOnt9LCJzdWJzIjotMSwiZGF0YSI6LTEsInBheWxvYWQiOi0xLCJ0eXBlIjoidXNlciIsInZlcnNpb24iOjJ9fQ.gLMxfYahCMX7wNwQrKm1rkhO4z2hMysEqm-hJjnyGBAb1LlUMFNfPQ_HfQAv0GUEkR9e8urlcJfwohHw2ZBkCA -N nats://europe-west3-gcp-dal-devnet-brokernode-cluster01.syntropynet.com -w exampleAiOiJKV1QiLCJhbGciOiJlZDI1NTE5LW5rZXkifQ.eyJqdGkiOiJVU1oyQkZJRk9PRjRFSlFXSjJTSVU --name "wasmlisher" --config "/path/config.json" --cfInterval 30 start
+./wasmlisher -K SUAMEQ43VTGBXZAUU7VSATP3LILQTAKET6XCSWJIYRIFZJ4RGYBLIGZXX -W exampleXAiOiJKV1QiLCJhbGciOiJlZDI1NTE5LW5rZXkifQ.eyJqdGkiOiJKUkJEV0hISEUzUE9PSTdNVVpQNlVJQ0NGTTZJQ1JRM0NGSVNUWFY1QUdXNjVPMjdJSkdRIiwiaWF0IjoxNzExNTI5NjgzLCJpc3MiOiJBRDVHUENaVVFLRVhaTlNMTEZaUklDVjIySE1QQlhCQ0NFV0c3TEdZQkRPRTJWN1ZBMlBBWjQzVyIsInN1YiI6IlVETFVWR0hFSVRRWEk1NkE3TFpNR0lDWVhUQVlGSVdZRTNYUEE0SFRWVk1IVUFaTVhJR1VOUUNGIiwibmF0cyI6eyJwdWIiOnt9LCJzdWIiOnt9LCJzdWJzIjotMSwiZGF0YSI6LTEsInBheWxvYWQiOi0xLCJ0eXBlIjoidXNlciIsInZlcnNpb24iOjJ9fQ.gLMxfYahCMX7wNwQrKm1rkhO4z2hMysEqm-hJjnyGBAb1LlUMFNfPQ_HfQAv0GUEkR9e8urlcJfwohHw2ZBkCA -N nats://europe-west3-gcp-dal-devnet-brokernode-cluster01.synternet.com -w exampleAiOiJKV1QiLCJhbGciOiJlZDI1NTE5LW5rZXkifQ.eyJqdGkiOiJVU1oyQkZJRk9PRjRFSlFXSjJTSVU --name "wasmlisher" --config "/path/config.json" --cfInterval 30 start
 ```
+
+

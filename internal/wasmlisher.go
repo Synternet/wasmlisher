@@ -3,8 +3,8 @@ package wasmlisher
 import (
 	"context"
 	"errors"
-	dlsdkOptions "github.com/syntropynet/data-layer-sdk/pkg/options"
-	dlsdk "github.com/syntropynet/data-layer-sdk/pkg/service"
+	dlsdkOptions "github.com/synternet/data-layer-sdk/pkg/options"
+	dlsdk "github.com/synternet/data-layer-sdk/pkg/service"
 	"log"
 	"time"
 )
