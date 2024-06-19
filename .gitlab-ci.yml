@@ -1,5 +1,5 @@
 default:
-  image: registry.gitlab.com/synternet/devops/container-images/imagebuilder:latest
+  image: registry.gitlab.com/syntropynet/devops/container-images/imagebuilder:latest
   tags:
     - docker
 
@@ -16,7 +16,7 @@ variables:
 .rule_definitions:
   rules:
     - if: &master '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      
+
 before_script:
   - echo -e "machine gitlab.com\nlogin gitlab-ci-token\npassword ${CI_JOB_TOKEN}" > ~/.netrc
 
@@ -26,29 +26,29 @@ stages:
   - update-tag
 
 coverage:
-    stage: test
-    tags:
-        - docker
-    image: golang
-    # Count tests coverage only for devel
-    script:
-        - mkdir -p ./coverage
-        - go install github.com/t-yuki/gocover-cobertura@latest
-        - go env -w GOPRIVATE=github.com/synternet/*
-        - go test ./... -v -coverprofile=coverage/coverage.txt -covermode count
-        - go tool cover -func=coverage/coverage.txt 
-        - go tool cover -html=coverage/coverage.txt -o coverage/coverage.html
-        - $GOPATH/bin/gocover-cobertura < coverage/coverage.txt > coverage/coverage.xml
-    coverage: /\(statements\)(?:\s+)?(\d+(?:\.\d+)?%)/
-    artifacts:
-      reports:
-        coverage_report:
-          coverage_format: cobertura
-          path: coverage/coverage.xml
-      name: $CI_JOB_NAME
-      paths:
-        - coverage/
-      expire_in: 30 days
+  stage: test
+  tags:
+    - docker
+  image: golang
+  # Count tests coverage only for devel
+  script:
+    - mkdir -p ./coverage
+    - go install github.com/t-yuki/gocover-cobertura@latest
+    - go env -w GOPRIVATE=github.com/syntropynet/*
+    - go test ./... -v -coverprofile=coverage/coverage.txt -covermode count
+    - go tool cover -func=coverage/coverage.txt
+    - go tool cover -html=coverage/coverage.txt -o coverage/coverage.html
+    - $GOPATH/bin/gocover-cobertura < coverage/coverage.txt > coverage/coverage.xml
+  coverage: /\(statements\)(?:\s+)?(\d+(?:\.\d+)?%)/
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/coverage.xml
+    name: $CI_JOB_NAME
+    paths:
+      - coverage/
+    expire_in: 30 days
 
 pages:
   stage: test
@@ -62,7 +62,7 @@ pages:
   artifacts:
     paths:
       - public
-    expire_in: 30 days 
+    expire_in: 30 days
   needs:
     - coverage
   rules:
@@ -77,18 +77,18 @@ build-image:
     - docker push $CI_REGISTRY_IMAGE/$APP_NAME --all-tags
   rules:
     - if: *master
-      
+
 update-tag:
   stage: update-tag
   before_script:
     - git config --global user.email "devops-gitlab@noia.network"
     - git config --global user.name "Family Friendly DevOps bot"
   script:
-    - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/synternet/devops/argocd/applications.git
+    - git clone https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/syntropynet/devops/argocd/applications.git
     - 'sed -i "s/tag:.*/tag: \"$CI_COMMIT_SHORT_SHA\"/" applications/$PROJECT/$APP_NAME-publisher-devnet/$ENV/values.yaml'
     - cd applications
     - git add $PROJECT/$APP_NAME-publisher-devnet/$ENV/values.yaml
     - git commit -m "Updated image tag for $APP_NAME-publisher-devnet to $CI_COMMIT_SHORT_SHA"
-    - git push https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/synternet/devops/argocd/applications.git
+    - git push https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/syntropynet/devops/argocd/applications.git
   rules:
     - if: *master
