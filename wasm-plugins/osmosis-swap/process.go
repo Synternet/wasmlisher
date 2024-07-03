@@ -73,18 +73,17 @@ func ProcessAmountMessageFromStream(data []byte) []byte {
 		}
 	}
 
-	logResult := incoming.TxResult.Result.Log
 	tokenOutAmount, tokenInAmount := "", ""
 
 	if tokenOutDenom != "" && strings.Contains(messageType, "MsgSwapExactAmountIn") {
 		re := regexp.MustCompile(`"tokens_out","value":"([0-9]+)` + tokenOutDenom + `"`)
-		match := re.FindStringSubmatch(logResult)
+		match := re.FindStringSubmatch(string(data))
 		if len(match) > 0 {
 			tokenOutAmount = match[1]
 		}
 	} else if tokenInDenom != "" && strings.Contains(messageType, "MsgSwapExactAmountOut") {
 		re := regexp.MustCompile(`"amount","value":"([0-9]+)` + tokenInDenom + `"`)
-		match := re.FindStringSubmatch(logResult)
+		match := re.FindStringSubmatch(string(data))
 		if len(match) > 0 {
 			tokenInAmount = match[1]
 		}

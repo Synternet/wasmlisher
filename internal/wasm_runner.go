@@ -32,6 +32,17 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 
 	wasiConfig := wasmtimego.NewWasiConfig()
 
+	wasiConfig.InheritStdout()
+
+	keys := make([]string, 0, len(env))
+	values := make([]string, 0, len(env))
+
+	for k, v := range env {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	wasiConfig.SetEnv(keys, values)
+
 	store.SetWasi(wasiConfig)
 
 	linker := wasmtimego.NewLinker(engine)
@@ -66,7 +77,7 @@ func (w *Wasmlisher) RunWasmStream(wasmFilePath string, inputStream <-chan []byt
 	memorySize := int32(len(memoryData))
 	fmt.Printf("Memory size: %d bytes\n", memorySize)
 
-	const memoryBlockSize = 55000 // Adjust this based on your needs
+	const memoryBlockSize = 1000000
 
 	if memoryBlockSize > memorySize {
 		log.Fatalf("Memory block size %d exceeds memory size %d", memoryBlockSize, memorySize)
