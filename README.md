@@ -37,13 +37,25 @@ A typical config from file or endpoint output might look like this:
 [
   {
     "input": "synternet.osmosis.tx",
+    "input_type": "nats",
     "output": "wasmlisher.osmosis.swap",
     "file": "/home/wasmslisher/wasm/tx.wasm",
     "type": "filesystem",
   },
   {
     "input": "synternet.osmosis.block",
+    "input_type": "nats",
     "output": "wasmlisher.osmosis.block",
+    "file": "/home/wasmslisher/wasm/block.wasm",
+    "type": "filesystem",
+    "env": {
+      "ENV_VAR_NAME": "VALUE"
+    }
+  },
+  {
+    "input": "/path/to/socket",
+    "input_type": "nats",
+    "output": "wasmlisher.osmosis.swap",
     "file": "/home/wasmslisher/wasm/block.wasm",
     "type": "filesystem",
     "env": {

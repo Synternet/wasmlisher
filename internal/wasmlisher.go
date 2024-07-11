@@ -5,7 +5,9 @@ import (
 	"errors"
 	dlsdkOptions "github.com/synternet/data-layer-sdk/pkg/options"
 	dlsdk "github.com/synternet/data-layer-sdk/pkg/service"
+	"io"
 	"log"
+	"net"
 	"time"
 )
 
@@ -70,14 +72,58 @@ func (w *Wasmlisher) reloadConfigPeriodically() {
 
 func (w *Wasmlisher) subscribeToStream(stream StreamConf) {
 	msgChannel := make(chan []byte)
-
 	w.msgChannels[stream.InputStream] = msgChannel
-	_, err := w.Publisher.SubscribeTo(w.handlerInputStreamFactory(stream.InputStream), stream.InputStream)
-	if err != nil {
-		log.Printf("Error subscribing to stream: %v\n", err)
+
+	switch stream.InputType {
+	case "nats":
+		_, err := w.Publisher.SubscribeTo(w.handlerInputStreamFactory(stream.InputStream), stream.InputStream)
+		if err != nil {
+			log.Printf("Error subscribing to NATS stream: %v\n", err)
+			return
+		}
+	case "unix_socket":
+		go w.handleUnixSocket(stream.InputStream, msgChannel)
+	default:
+		log.Printf("Unsupported input type: %s\n", stream.InputType)
 		return
 	}
+
 	go w.RunWasmStream(stream.LocalPath, msgChannel, stream.OutputStream, stream.Env)
+}
+
+func (w *Wasmlisher) handleUnixSocket(socketPath string, msgChannel chan []byte) {
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		log.Printf("Error listening on Unix socket %s: %v", socketPath, err)
+		return
+	}
+	defer listener.Close()
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("Error accepting Unix socket connection: %v", err)
+			continue
+		}
+
+		go w.handleUnixSocketConnection(conn, msgChannel)
+	}
+}
+
+func (w *Wasmlisher) handleUnixSocketConnection(conn net.Conn, msgChannel chan []byte) {
+	defer conn.Close()
+	buffer := make([]byte, 16384)
+
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			if err != io.EOF {
+				log.Printf("Error reading from Unix socket: %v", err)
+			}
+			break
+		}
+		msgChannel <- buffer[:n]
+	}
 }
 
 // Factory function to create a handler function bound to a specific stream's channel

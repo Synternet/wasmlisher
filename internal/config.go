@@ -14,6 +14,7 @@ import (
 // StreamConf represents configuration of our secondary streams.
 type StreamConf struct {
 	InputStream  string            `json:"input"`
+	InputType    string            `json:"input_type"` // "nats", "unix_socket", etc.
 	OutputStream string            `json:"output"`
 	File         string            `json:"file"`
 	Type         string            `json:"type"`
