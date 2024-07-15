@@ -3,11 +3,13 @@ package wasmlisher
 import (
 	"context"
 	"errors"
+	"fmt"
 	dlsdkOptions "github.com/synternet/data-layer-sdk/pkg/options"
 	dlsdk "github.com/synternet/data-layer-sdk/pkg/service"
 	"io"
 	"log"
 	"net"
+	"os"
 	"time"
 )
 
@@ -82,7 +84,10 @@ func (w *Wasmlisher) subscribeToStream(stream StreamConf) {
 			return
 		}
 	case "unix_socket":
-		go w.handleUnixSocket(stream.InputStream, msgChannel)
+		if err := w.createAndHandleUnixSocket(stream.InputStream, msgChannel); err != nil {
+			log.Printf("Error setting up Unix socket %s: %v", stream.InputStream, err)
+			return
+		}
 	default:
 		log.Printf("Unsupported input type: %s\n", stream.InputType)
 		return
@@ -91,23 +96,29 @@ func (w *Wasmlisher) subscribeToStream(stream StreamConf) {
 	go w.RunWasmStream(stream.LocalPath, msgChannel, stream.OutputStream, stream.Env)
 }
 
-func (w *Wasmlisher) handleUnixSocket(socketPath string, msgChannel chan []byte) {
+func (w *Wasmlisher) createAndHandleUnixSocket(socketPath string, msgChannel chan []byte) error {
+	// Remove existing socket if present
+	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove existing Unix socket %s: %w", socketPath, err)
+	}
+
 	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
-		log.Printf("Error listening on Unix socket %s: %v", socketPath, err)
-		return
+		return fmt.Errorf("error listening on Unix socket %s: %v", socketPath, err)
 	}
-	defer listener.Close()
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Printf("Error accepting Unix socket connection: %v", err)
-			continue
+	go func() {
+		defer listener.Close()
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				log.Printf("Error accepting Unix socket connection: %v", err)
+				continue
+			}
+			go w.handleUnixSocketConnection(conn, msgChannel)
 		}
-
-		go w.handleUnixSocketConnection(conn, msgChannel)
-	}
+	}()
+	return nil
 }
 
 func (w *Wasmlisher) handleUnixSocketConnection(conn net.Conn, msgChannel chan []byte) {
@@ -122,7 +133,11 @@ func (w *Wasmlisher) handleUnixSocketConnection(conn net.Conn, msgChannel chan [
 			}
 			break
 		}
-		msgChannel <- buffer[:n]
+		select {
+		case msgChannel <- buffer[:n]:
+		default:
+			log.Println("Message channel full. Discarding data")
+		}
 	}
 }
 
