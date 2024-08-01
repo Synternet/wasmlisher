@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -73,7 +74,7 @@ func (w *Wasmlisher) reloadConfigPeriodically() {
 }
 
 func (w *Wasmlisher) subscribeToStream(stream StreamConf) {
-	msgChannel := make(chan []byte)
+	msgChannel := make(chan []byte, 100)
 	w.msgChannels[stream.InputStream] = msgChannel
 
 	switch stream.InputType {
@@ -123,21 +124,35 @@ func (w *Wasmlisher) createAndHandleUnixSocket(socketPath string, msgChannel cha
 
 func (w *Wasmlisher) handleUnixSocketConnection(conn net.Conn, msgChannel chan []byte) {
 	defer conn.Close()
-	buffer := make([]byte, 16384)
+	const lengthPrefixSize = 10
 
 	for {
-		n, err := conn.Read(buffer)
+		// Read length prefix
+		lengthPrefix := make([]byte, lengthPrefixSize)
+		_, err := io.ReadFull(conn, lengthPrefix)
 		if err != nil {
 			if err != io.EOF {
-				log.Printf("Error reading from Unix socket: %v", err)
+				log.Printf("Error reading length prefix from Unix socket: %v", err)
 			}
 			break
 		}
-		select {
-		case msgChannel <- buffer[:n]:
-		default:
-			log.Println("Message channel full. Discarding data")
+
+		// Parse the length
+		messageLength, err := strconv.Atoi(string(lengthPrefix))
+		if err != nil {
+			log.Printf("Invalid length prefix: %v", err)
+			break
 		}
+
+		// Read the actual message
+		message := make([]byte, messageLength)
+		_, err = io.ReadFull(conn, message)
+		if err != nil {
+			log.Printf("Error reading message from Unix socket: %v", err)
+			break
+		}
+
+		msgChannel <- message
 	}
 }
 
