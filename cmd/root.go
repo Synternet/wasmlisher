@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/nats-io/nats.go"
 	"log"
 	"os"
@@ -10,6 +11,7 @@ import (
 )
 
 var (
+	flagNatsAccNkey   *string
 	flagSubNatsUrls   *string
 	flagPubNatsUrls   *string
 	flagSubUserCreds  *string
@@ -35,6 +37,19 @@ var rootCmd = &cobra.Command{
 	Short: "",
 	Long:  ``,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+
+		// Sacrifice some security for the sake of user experience by allowing to
+		// supply NATS account NKey instead of passing created user NKey and user JWS.
+		if *flagNatsAccNkey != "" {
+			nkey, jwt, err := CreateUser(*flagNatsAccNkey)
+			flagPubJWT = nkey
+			flagPubNkey = jwt
+
+			if err != nil {
+				panic(fmt.Errorf("failed to generate user JWT: %w", err))
+			}
+		}
+
 		log.SetFlags(0)
 		var err error
 		natsSubConnection, err = options.MakeNats("Wasm Publisher", *flagSubNatsUrls, *flagSubUserCreds, *flagSubNkey, *flagSubJWT, *flagCACert, *flagTLSClientCert, *flagTLSKey)
@@ -61,6 +76,7 @@ func Execute() {
 
 func init() {
 
+	flagNatsAccNkey = rootCmd.PersistentFlags().StringP("nats-acc-nkey", "", os.Getenv("NATS_ACC_NKEY"), "NATS account NKey (seed)")
 	flagSubNatsUrls = rootCmd.PersistentFlags().StringP("nats-sub-url", "n", os.Getenv("NATS_SUB_URL"), "NATS server URLs (separated by comma)")
 	flagPubNatsUrls = rootCmd.PersistentFlags().StringP("nats-pub-url", "N", os.Getenv("NATS_PUB_URL"), "NATS server URLs (separated by comma)")
 	flagSubUserCreds = rootCmd.PersistentFlags().StringP("nats-sub-creds", "c", os.Getenv("NATS_SUB_CREDS"), "NATS User Credentials File (combined JWT and NKey file) ")
