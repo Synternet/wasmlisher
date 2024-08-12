@@ -61,7 +61,16 @@ A typical config from file or endpoint output might look like this:
     "env": {
       "ENV_VAR_NAME": "VALUE"
     }
-  }
+  },
+  [
+    {
+      "input": "/root/socket",
+      "input_type": "unix_socket",
+      "output": "wasmlisher.testnet.osmosis.swap",
+      "file": "/root/wasmlisher/wasm-plugins/osmosis-swap/osmosisswap.wasm",
+      "type": "filesystem"
+    }
+  ]
 ]
 ```
 
