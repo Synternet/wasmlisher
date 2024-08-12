@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"context"
+	wasmlisher "github.com/Synternet/wasmlisher/internal"
 	dlsdkOptions "github.com/synternet/data-layer-sdk/pkg/options"
 	dlsdk "github.com/synternet/data-layer-sdk/pkg/service"
-	wasmlisher "gitlab.com/synternet/amberdm/publisher/wasmlisher/internal"
 	"log"
 	"os"
 	"os/signal"

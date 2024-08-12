@@ -1,4 +1,4 @@
-module gitlab.com/synternet/amberdm/publisher/wasmlisher
+module github.com/Synternet/wasmlisher
 
 go 1.21
 

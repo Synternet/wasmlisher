@@ -21,7 +21,7 @@ Wasmlisher is a robust service designed to interact with NATS streaming systems,
 Clone the repository and build the Wasmlisher:
 
 ```bash
-git@gitlab.com:synternet/amberdm/publisher/wasmlisher.git
+git@github.com:Synternet/wasmlisher.git
 cd wasmlisher
 go mod tidy
 make build
