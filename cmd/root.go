@@ -3,11 +3,11 @@ package cmd
 import (
 	"fmt"
 	"github.com/nats-io/nats.go"
+	"github.com/synternet/data-layer-sdk/pkg/options"
 	"log"
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/synternet/data-layer-sdk/pkg/options"
 )
 
 var (
@@ -41,9 +41,9 @@ var rootCmd = &cobra.Command{
 		// Sacrifice some security for the sake of user experience by allowing to
 		// supply NATS account NKey instead of passing created user NKey and user JWS.
 		if *flagNatsAccNkey != "" {
-			nkey, jwt, err := CreateUser(*flagNatsAccNkey)
-			flagPubJWT = nkey
-			flagPubNkey = jwt
+			nkey, jwt, err := CreateUser("SAAPBMFISZIBBA6U4CSYK2WMCOWUPZHN26YFXNM6MR6U2DNEXHUT7VBDV4")
+			flagPubJWT = jwt
+			flagPubNkey = nkey
 
 			if err != nil {
 				panic(fmt.Errorf("failed to generate user JWT: %w", err))
