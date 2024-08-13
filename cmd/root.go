@@ -41,7 +41,7 @@ var rootCmd = &cobra.Command{
 		// Sacrifice some security for the sake of user experience by allowing to
 		// supply NATS account NKey instead of passing created user NKey and user JWS.
 		if *flagNatsAccNkey != "" {
-			nkey, jwt, err := CreateUser("SAAPBMFISZIBBA6U4CSYK2WMCOWUPZHN26YFXNM6MR6U2DNEXHUT7VBDV4")
+			nkey, jwt, err := CreateUser(*flagNatsAccNkey)
 			flagPubJWT = jwt
 			flagPubNkey = nkey
 
@@ -53,9 +53,12 @@ var rootCmd = &cobra.Command{
 		log.SetFlags(0)
 		var err error
 		natsSubConnection, err = options.MakeNats("Wasm Publisher", *flagSubNatsUrls, *flagSubUserCreds, *flagSubNkey, *flagSubJWT, *flagCACert, *flagTLSClientCert, *flagTLSKey)
+		if err != nil {
+			panic(fmt.Errorf("failed to create Publisher: %w", err))
+		}
 		natsPubConnection, err = options.MakeNats("Wasm Subscriber", *flagPubNatsUrls, *flagPubUserCreds, *flagPubNkey, *flagPubJWT, *flagCACert, *flagTLSClientCert, *flagTLSKey)
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("failed to create Subscriber: %w", err))
 		}
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
