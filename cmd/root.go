@@ -91,7 +91,7 @@ func init() {
 	flagTLSKey = rootCmd.PersistentFlags().StringP("client-key", "", "", "NATS Private key file for client certificate")
 	flagTLSClientCert = rootCmd.PersistentFlags().StringP("client-cert", "", "", "NATS TLS client certificate file")
 	flagCACert = rootCmd.PersistentFlags().StringP("ca-cert", "", "", "NATS CA certificate file")
-	flagPrefixName = rootCmd.PersistentFlags().StringP("prefix", "", os.Getenv("PUBLISHER_PREFIX"), "NATS topic prefix name as in {prefix}.solana")
+	flagPrefixName = rootCmd.PersistentFlags().StringP("prefix", "", os.Getenv("PREFIX"), "NATS topic prefix name as in {prefix}.solana")
 	flagName = rootCmd.PersistentFlags().StringP("name", "", os.Getenv("PUBLISHER_NAME"), "NATS subject name as in {prefix}.{name}.>")
 	flagConfig = rootCmd.PersistentFlags().StringP("config", "", os.Getenv("CONFIG_DIR"), "Wasmlisher config dir")
 	flagCfInterval = rootCmd.PersistentFlags().IntP("cfInterval", "", 60, "Wasmlisher config reload interval in seconds")

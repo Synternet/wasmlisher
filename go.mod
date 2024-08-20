@@ -8,7 +8,7 @@ require (
 	github.com/nats-io/nats.go v1.25.0
 	github.com/nats-io/nkeys v0.4.4
 	github.com/spf13/cobra v1.7.0
-	github.com/synternet/data-layer-sdk v0.4.1
+	github.com/synternet/data-layer-sdk v0.4.2
 )
 
 require (
